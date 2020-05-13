@@ -27,7 +27,8 @@ export default class PersonRendererApplicationCustomizer
   private _resultService: IResultService;
 
   @override
-  public onInit(): Promise<void> {
+  public async onInit(): Promise<void> {
+    await new Promise(resolve => setTimeout(resolve, 10000));
     this._resultService = new ResultService();
     this._resultService.registerRenderer(this.componentId, 'Persona', 'People', (e) => this.onChangeHappened(e), ['SecondaryText', 'TertiaryText']);
     return Promise.resolve();

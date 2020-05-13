@@ -17,7 +17,8 @@ export default class SearchRendererApplicationCustomizer
     private _resultService: IResultService;
 
     @override
-    public onInit(): Promise<void> {
+    public async onInit(): Promise<void> {
+        await new Promise(resolve => setTimeout(resolve, 10000));
         this._resultService = new ResultService();
         this.onChangeHappened.bind(this);
         this._resultService.registerRenderer(this.componentId, 'CodeRenderer', 'QueryList', this.onChangeHappened, ['Subheader']);
