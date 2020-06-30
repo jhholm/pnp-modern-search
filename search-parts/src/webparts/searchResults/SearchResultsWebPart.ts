@@ -195,10 +195,38 @@ export default class SearchResultsWebPart extends BaseClientSideWebPart<ISearchR
         // Get default selected refiners from the URL
         this.defaultSelectedFilters = SearchHelper.getRefinementFiltersFromUrl();
         selectedFilters = this.defaultSelectedFilters;
+       
+        // let queryDataSourceValue = this.properties.queryKeywords.tryGetValue();
+        // let queryKeywords = queryDataSourceValue ? queryDataSourceValue : this.properties.defaultSearchQuery;
+        
 
         let queryDataSourceValue = this.properties.queryKeywords.tryGetValue();
-        let queryKeywords = queryDataSourceValue ? queryDataSourceValue : this.properties.defaultSearchQuery;
-        
+
+        let queryKeywords = this.properties.defaultSearchQuery;
+
+        if (queryDataSourceValue && typeof (queryDataSourceValue) === 'string') {
+            queryKeywords = queryDataSourceValue;
+        }
+        else if (queryDataSourceValue && typeof (queryDataSourceValue) == "object") {
+            //https://github.com/microsoft-search/pnp-modern-search/issues/325
+            //new issue with search body as object - 2020-06-23
+            const refChunks = this.properties.queryKeywords.reference.split(':');
+            if (refChunks.length >= 3) {
+                const environmentType = refChunks[1];
+                const paramType = refChunks[2];
+                if (environmentType == "UrlData" && paramType !== "fragment") {
+                    const paramChunks = paramType.split('.');
+                    const queryTextParam = paramChunks.length === 2 ? paramChunks[1] : 'q';
+                    if (queryDataSourceValue[paramChunks[0]][queryTextParam]) {
+                        queryKeywords = decodeURIComponent(queryDataSourceValue[paramChunks[0]][queryTextParam]);
+                    }
+                }
+                else if (queryDataSourceValue[paramType] && queryDataSourceValue[paramType] !== 'undefined') {
+                    queryKeywords = decodeURIComponent(queryDataSourceValue[paramType]);
+                }
+            }
+        }
+
         // Get data from connected sources
         if (this._refinerSourceData && !this._refinerSourceData.isDisposed) {
             const refinerSourceData: IRefinerSourceData = this._refinerSourceData.tryGetValue();
@@ -212,7 +240,7 @@ export default class SearchResultsWebPart extends BaseClientSideWebPart<ISearchR
                     this.defaultSelectedFilters = [];
                 }          
             }
-        }
+        }        
 
         if (this._searchVerticalSourceData && !this._searchVerticalSourceData.isDisposed) {
             const searchVerticalSourceData: ISearchVerticalSourceData = this._searchVerticalSourceData.tryGetValue();
@@ -234,6 +262,10 @@ export default class SearchResultsWebPart extends BaseClientSideWebPart<ISearchR
 
         const currentLocaleId = LocalizationHelper.getLocaleId(this.context.pageContext.cultureInfo.currentCultureName);
         const queryModifier = this._queryModifierInstance && this._queryModifierInstance.isInitialized ? this._queryModifierInstance.instance : null;
+
+        //const refinerTest = selectedFilters.length > 0 ? SearchHelper.buildRefinementQueryString(selectedFilters) : [this.properties.refinementFilters.replace(/\'/g,'"')];
+        //console.log(refinerTest);
+        //debugger;
 
         // Configure the provider before the query according to our needs
         this._searchService = update(this._searchService, {

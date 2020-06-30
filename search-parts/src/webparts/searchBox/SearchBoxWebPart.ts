@@ -79,13 +79,38 @@ export default class SearchBoxWebPart extends BaseClientSideWebPart<ISearchBoxWe
     }
 
     let inputValue = this.properties.defaultQueryKeywords.tryGetValue();
+    //debugger;
+    
+    if (inputValue) {
+      if (typeof (inputValue) === 'string') {
+          this._searchQuery.rawInputValue = decodeURIComponent(inputValue);
+      }
+      else if (typeof (inputValue === 'object')) {
+          this._searchQuery.rawInputValue = "";
+          //https://github.com/microsoft-search/pnp-modern-search/issues/325
+          //new issue with search body as object - 2020-06-23
+          const refChunks = this.properties.defaultQueryKeywords.reference.split(':');
+          if (refChunks.length >= 3) {
+              const environmentType = refChunks[1];
+              const paramType = refChunks[2];
 
-    if (inputValue && typeof(inputValue) === 'string') {
+              if (environmentType == "UrlData" && paramType !== "fragment") {
+                  const paramChunks = paramType.split('.');
+                  const queryTextParam = paramChunks.length === 2 ? paramChunks[1] : 'q';
+                  if (inputValue[paramChunks[0]][queryTextParam]) {
+                      this._searchQuery.rawInputValue = decodeURIComponent(inputValue[paramChunks[0]][queryTextParam]);
+                  }
+              }
+              else if (inputValue[paramType] && inputValue[paramType] !== 'undefined') {
+                  this._searchQuery.rawInputValue = decodeURIComponent(inputValue[paramType]);
+              }
+          }
+      }
 
       // Notify subscriber a new value if available
-      this._searchQuery.rawInputValue = decodeURIComponent(inputValue);
       this.context.dynamicDataSourceManager.notifyPropertyChanged('searchQuery');
-    }
+
+  }
 
     const enableSuggestions = this.properties.enableQuerySuggestions && this.properties.suggestionProviders.some(sp => sp.providerEnabled);
 
